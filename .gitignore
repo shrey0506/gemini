@@ -174,35 +174,43 @@ cython_debug/
 
 
 
-# Function to clean and format extracted rows
-def extract_and_format_table(pdf_path):
-    extracted_data = []
-    with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
-            tables = page.extract_tables()
-            for table in tables:
-                for row in table:
-                    # Skip rows that don't contain enough data
-                    if len(row) < 7:
-                        continue
-                    
-                    # Format the row to match the desired structure
-                    no = row[0].strip() if row[0] else ""
-                    charity = row[1].strip() if row[1] else ""
-                    objects = row[2].strip() if row[2] else ""
-                    address = row[3].strip() if row[3] else ""
-                    email = row[4].strip() if row[4] else ""
-                    website = row[5].strip() if row[5] else ""
-                    date_registered = row[6].strip() if row[6] else ""
-                    
-                    extracted_data.append([no, charity, objects, address, email, website, date_registered])
-    return extracted_data
+import pandas as pd
+import re
+from PyPDF2 import PdfReader
 
-# Extract and write the table content to CSV
-formatted_rows = extract_and_format_table(file_path)
-with open(output_csv, "w", newline="", encoding="utf-8") as csvfile:
-    writer = csv.writer(csvfile)
-    writer.writerow(headers)  # Write the headers
-    writer.writerows(formatted_rows)  # Write the formatted rows
+# Function to parse charity details
+def parse_charity_details(text):
+    pattern = r"(\d+)\s+(.*?)\n(.*?)\n(.*?)\n(.*?)\s+(http.*?|www\..*?)?\s+(\d{2} [A-Za-z]{3} \d{4})"
+    matches = re.findall(pattern, text, re.DOTALL)
+    data = []
+    for match in matches:
+        charity_number = match[0].strip()
+        charity_name = match[1].strip()
+        objects = match[2].replace("\n", " ").strip()
+        address = match[3].replace("\n", " ").strip()
+        email = match[4].strip()
+        website = match[5].strip() if match[5] else "N/A"
+        date_registered = match[6].strip()
+        data.append([charity_number, charity_name, objects, address, email, website, date_registered])
+    return data
 
-print(f"Structured table content has been saved to {output_csv}")
+# Load the PDF and extract text
+pdf_path = "path_to_your_uploaded_file.pdf"  # Replace with the actual path
+reader = PdfReader(pdf_path)
+all_text = ""
+for page in reader.pages:
+    all_text += page.extract_text()
+
+# Parse the details
+charity_data = parse_charity_details(all_text)
+
+# Create a DataFrame
+columns = ["Table No.", "Charity", "Objects", "Correspondence Address", "Email Address", "Website", "Date Registered"]
+df = pd.DataFrame(charity_data, columns=columns)
+
+# Save to CSV
+output_csv = "charity_details.csv"
+df.to_csv(output_csv, index=False)
+
+print(f"Data extracted and saved to {output_csv}")
+
