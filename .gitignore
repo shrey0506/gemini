@@ -174,37 +174,35 @@ cython_debug/
 
 
 
-import pdfplumber
-import csv
-
-# File path for the uploaded PDF
-file_path = "/mnt/data/publicindex_latest-020125.pdf"
-output_csv = "structured_output_table.csv"
-
-# Column headers
-headers = ["No.", "Charity", "Objects", "Correspondence address", "Email address", "Website", "Date Registered"]
-
-# Function to format extracted rows
-def format_row(row):
-    # Logic to separate and clean rows based on specific formatting patterns
-    if len(row) < 7:
-        return None  # Skip rows that don't match the expected format
-    return row
-
-# Open the PDF file and extract tables
-with pdfplumber.open(file_path) as pdf:
-    with open(output_csv, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(headers)  # Write headers
-        
+# Function to clean and format extracted rows
+def extract_and_format_table(pdf_path):
+    extracted_data = []
+    with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
             tables = page.extract_tables()
             for table in tables:
                 for row in table:
-                    # Filter and format rows
-                    formatted_row = format_row(row)
-                    if formatted_row:
-                        writer.writerow(formatted_row)
+                    # Skip rows that don't contain enough data
+                    if len(row) < 7:
+                        continue
+                    
+                    # Format the row to match the desired structure
+                    no = row[0].strip() if row[0] else ""
+                    charity = row[1].strip() if row[1] else ""
+                    objects = row[2].strip() if row[2] else ""
+                    address = row[3].strip() if row[3] else ""
+                    email = row[4].strip() if row[4] else ""
+                    website = row[5].strip() if row[5] else ""
+                    date_registered = row[6].strip() if row[6] else ""
+                    
+                    extracted_data.append([no, charity, objects, address, email, website, date_registered])
+    return extracted_data
+
+# Extract and write the table content to CSV
+formatted_rows = extract_and_format_table(file_path)
+with open(output_csv, "w", newline="", encoding="utf-8") as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(headers)  # Write the headers
+    writer.writerows(formatted_rows)  # Write the formatted rows
 
 print(f"Structured table content has been saved to {output_csv}")
-
