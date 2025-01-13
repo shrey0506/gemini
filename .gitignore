@@ -179,33 +179,32 @@ import csv
 
 # File path for the uploaded PDF
 file_path = "/mnt/data/publicindex_latest-020125.pdf"
-output_csv = "filtered_output_table.csv"
+output_csv = "structured_output_table.csv"
 
-# Keywords or phrases to exclude
-excluded_phrases = [
-    "ALPHABETICAL INDEX OF CHARITIES",
-    "Registered in the Isle of Man under the Charities Registration and Regulation Act 2019",
-    "For up to date information on Charity listings"
-]
+# Column headers
+headers = ["No.", "Charity", "Objects", "Correspondence address", "Email address", "Website", "Date Registered"]
 
-# Function to check if a row contains excluded phrases
-def is_excluded(row):
-    for phrase in excluded_phrases:
-        if any(phrase in cell for cell in row if cell):  # Check each cell in the row
-            return True
-    return False
+# Function to format extracted rows
+def format_row(row):
+    # Logic to separate and clean rows based on specific formatting patterns
+    if len(row) < 7:
+        return None  # Skip rows that don't match the expected format
+    return row
 
 # Open the PDF file and extract tables
 with pdfplumber.open(file_path) as pdf:
-    with open(output_csv, "w", newline="") as csvfile:
+    with open(output_csv, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile)
+        writer.writerow(headers)  # Write headers
+        
         for page in pdf.pages:
-            # Extract tables from each page
             tables = page.extract_tables()
             for table in tables:
                 for row in table:
-                    # Write the row only if it doesn't contain excluded phrases
-                    if not is_excluded(row):
-                        writer.writerow(row)
+                    # Filter and format rows
+                    formatted_row = format_row(row)
+                    if formatted_row:
+                        writer.writerow(formatted_row)
 
-print(f"Filtered table content has been saved to {output_csv}")
+print(f"Structured table content has been saved to {output_csv}")
+
