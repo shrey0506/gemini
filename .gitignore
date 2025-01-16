@@ -214,3 +214,306 @@ df.to_csv(output_csv, index=False)
 
 print(f"Data extracted and saved to {output_csv}")
 
+To split rows accurately based on the three conditions you provided (email, website, and date), we can identify where these elements appear together in the text and treat that as the boundary for a row. The solution involves using regular expressions to extract and structure the data.
+
+Revised Approach:
+
+1. Define the Row Boundaries:
+
+A row starts when an email is found and ends at the corresponding date.
+
+
+
+2. Regex to Match Complete Rows:
+
+A pattern is created to capture the email, optional website, and date in one go.
+
+
+
+3. Process and Split Rows:
+
+Use the regex to find all matches in the text and treat each match as a row.
+
+
+
+
+Updated Python Script:
+
+import re
+import csv
+
+# Sample text from page 1
+text = """
+John Doe john.doe@example.com www.example.com 10 Jan 2024
+Jane Smith jane.smith@example.com 12 Feb 2024
+Adam Johnson adam.j@example.com www.adamjohnson.com 23 Mar 2024
+"""
+
+# Define regex pattern to capture rows
+row_pattern = re.compile(
+    r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'  # Email
+    r'(?:\s+(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}))?'        # Optional website
+    r'\s+(\d{1,2} [A-Za-z]{3} \d{4})'                    # Date
+)
+
+# Extract rows using the pattern
+matches = row_pattern.findall(text)
+
+# Prepare data for CSV
+data = []
+for match in matches:
+    email = match[0]
+    website = match[1] if match[1] else ""  # Handle optional website
+    date = match[2]
+    data.append([email, website, date])
+
+# Save to CSV
+csv_file = 'output.csv'
+with open(csv_file, 'w', newline='', encoding='utf-8') as file:
+    writer = csv.writer(file)
+    # Write header
+    writer.writerow(['Email', 'Website', 'Date'])
+    # Write rows
+    writer.writerows(data)
+
+print(f"Data has been written to {csv_file}")
+
+Explanation:
+
+1. Regex Breakdown:
+
+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}): Matches the email.
+
+(?:\s+(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}))?: Optionally matches the website (non-capturing group with ?).
+
+\s+(\d{1,2} [A-Za-z]{3} \d{4}): Matches the date format (e.g., 10 Jan 2024).
+
+
+
+2. Findall:
+
+re.findall returns a list of tuples, each containing the captured groups (email, website, and date).
+
+
+
+3. Handling Optional Website:
+
+If the website group is empty, it's replaced with an empty string.
+
+
+
+4. CSV Writing:
+
+The extracted rows are saved to a CSV file with headers.
+
+
+
+
+Output:
+
+If you run the script with the provided sample text, the generated output.csv will look like this:
+
+This approach ensures the rows are split based on the presence of an email, optional website, and date, rather than relying on newline characters. Let me know if you have more requirements!
+
+To split rows accurately based on the three conditions you provided (email, website, and date), we can identify where these elements appear together in the text and treat that as the boundary for a row. The solution involves using regular expressions to extract and structure the data.
+
+Revised Approach:
+
+1. Define the Row Boundaries:
+
+A row starts when an email is found and ends at the corresponding date.
+
+
+
+2. Regex to Match Complete Rows:
+
+A pattern is created to capture the email, optional website, and date in one go.
+
+
+
+3. Process and Split Rows:
+
+Use the regex to find all matches in the text and treat each match as a row.
+
+
+
+
+Updated Python Script:
+
+import re
+import csv
+
+# Sample text from page 1
+text = """
+John Doe john.doe@example.com www.example.com 10 Jan 2024
+Jane Smith jane.smith@example.com 12 Feb 2024
+Adam Johnson adam.j@example.com www.adamjohnson.com 23 Mar 2024
+"""
+
+# Define regex pattern to capture rows
+row_pattern = re.compile(
+    r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'  # Email
+    r'(?:\s+(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}))?'        # Optional website
+    r'\s+(\d{1,2} [A-Za-z]{3} \d{4})'                    # Date
+)
+
+# Extract rows using the pattern
+matches = row_pattern.findall(text)
+
+# Prepare data for CSV
+data = []
+for match in matches:
+    email = match[0]
+    website = match[1] if match[1] else ""  # Handle optional website
+    date = match[2]
+    data.append([email, website, date])
+
+# Save to CSV
+csv_file = 'output.csv'
+with open(csv_file, 'w', newline='', encoding='utf-8') as file:
+    writer = csv.writer(file)
+    # Write header
+    writer.writerow(['Email', 'Website', 'Date'])
+    # Write rows
+    writer.writerows(data)
+
+print(f"Data has been written to {csv_file}")
+
+Explanation:
+
+1. Regex Breakdown:
+
+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}): Matches the email.
+
+(?:\s+(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}))?: Optionally matches the website (non-capturing group with ?).
+
+\s+(\d{1,2} [A-Za-z]{3} \d{4}): Matches the date format (e.g., 10 Jan 2024).
+
+
+
+2. Findall:
+
+re.findall returns a list of tuples, each containing the captured groups (email, website, and date).
+
+
+
+3. Handling Optional Website:
+
+If the website group is empty, it's replaced with an empty string.
+
+
+
+4. CSV Writing:
+
+The extracted rows are saved to a CSV file with headers.
+
+
+
+
+Output:
+
+If you run the script with the provided sample text, the generated output.csv will look like this:
+
+This approach ensures the rows are split based on the presence of an email, optional website, and date, rather than relying on newline characters. Let me know if you have more requirements!
+
+To split rows accurately based on the three conditions you provided (email, website, and date), we can identify where these elements appear together in the text and treat that as the boundary for a row. The solution involves using regular expressions to extract and structure the data.
+
+Revised Approach:
+
+1. Define the Row Boundaries:
+
+A row starts when an email is found and ends at the corresponding date.
+
+
+
+2. Regex to Match Complete Rows:
+
+A pattern is created to capture the email, optional website, and date in one go.
+
+
+
+3. Process and Split Rows:
+
+Use the regex to find all matches in the text and treat each match as a row.
+
+
+
+
+Updated Python Script:
+
+import re
+import csv
+
+# Sample text from page 1
+text = """
+John Doe john.doe@example.com www.example.com 10 Jan 2024
+Jane Smith jane.smith@example.com 12 Feb 2024
+Adam Johnson adam.j@example.com www.adamjohnson.com 23 Mar 2024
+"""
+
+# Define regex pattern to capture rows
+row_pattern = re.compile(
+    r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'  # Email
+    r'(?:\s+(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}))?'        # Optional website
+    r'\s+(\d{1,2} [A-Za-z]{3} \d{4})'                    # Date
+)
+
+# Extract rows using the pattern
+matches = row_pattern.findall(text)
+
+# Prepare data for CSV
+data = []
+for match in matches:
+    email = match[0]
+    website = match[1] if match[1] else ""  # Handle optional website
+    date = match[2]
+    data.append([email, website, date])
+
+# Save to CSV
+csv_file = 'output.csv'
+with open(csv_file, 'w', newline='', encoding='utf-8') as file:
+    writer = csv.writer(file)
+    # Write header
+    writer.writerow(['Email', 'Website', 'Date'])
+    # Write rows
+    writer.writerows(data)
+
+print(f"Data has been written to {csv_file}")
+
+Explanation:
+
+1. Regex Breakdown:
+
+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}): Matches the email.
+
+(?:\s+(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}))?: Optionally matches the website (non-capturing group with ?).
+
+\s+(\d{1,2} [A-Za-z]{3} \d{4}): Matches the date format (e.g., 10 Jan 2024).
+
+
+
+2. Findall:
+
+re.findall returns a list of tuples, each containing the captured groups (email, website, and date).
+
+
+
+3. Handling Optional Website:
+
+If the website group is empty, it's replaced with an empty string.
+
+
+
+4. CSV Writing:
+
+The extracted rows are saved to a CSV file with headers.
+
+
+
+
+Output:
+
+If you run the script with the provided sample text, the generated output.csv will look like this:
+
+This approach ensures the rows are split based on the presence of an email, optional website, and date, rather than relying on newline characters. Let me know if you have more requirements!
+
