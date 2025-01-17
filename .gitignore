@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+use# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -620,4 +620,48 @@ Output:
 For the given sample text, the output CSV (output.csv) will look like this:
 
 This ensures no data from the beginning of the row is lost. Let me know if further adjustments are needed!
+
+
+The request for adding a prefix before email IDs has been removed. Here's the updated code without any prefix:
+
+
+---
+
+Code:
+
+import re
+
+# Sample input text
+text = "123 hello world i am testing johndoe@gmail.com www.google.com 10 jan 2024"
+
+# Regular expression to capture the required patterns
+pattern = r'(?P<before_email>.*?)\s(?P<email>\S+@\S+)(?:\s+(?P<website>\b(?:www\.)?\S+\.\S+\b))?\s+(?P<date>\d{1,2}\s\w+\s\d{4})'
+
+# Process the text
+result = []
+
+match = re.search(pattern, text)
+if match:
+    before_email = match.group('before_email').strip()  # Text before the email
+    email = match.group('email')  # Extracted email
+    website = match.group('website')  # Extracted website (if any)
+    date = match.group('date')  # Extracted date
+
+    # Append the extracted values as a tuple
+    result = (before_email, email, website, date)
+
+# Print the result
+print(result)
+
+
+---
+
+Output:
+
+('123 hello world i am testing', 'johndoe@gmail.com', 'www.google.com', '10 jan 2024')
+
+This version focuses solely on extracting the components without altering the email ID. Let me know if there are further adjustments you'd like!
+
+
+
 
