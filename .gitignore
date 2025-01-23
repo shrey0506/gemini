@@ -205,3 +205,68 @@ for i, table in enumerate(tables):
     print(table)
     # Save table to CSV (optional)
     # table.to_csv(f'table_{i+1}.csv', index=False)
+
+
+
+
+
+
+
+
+from pdfminer.high_level import extract_text
+from pdfminer.layout import LTTextBoxHorizontal
+
+def extract_object_data(pdf_path):
+    """
+    Extracts the "Objects" column and its data from the given PDF file.
+
+    Args:
+        pdf_path: Path to the PDF file.
+
+    Returns:
+        A list of strings, where each string represents the "Objects" data for a row.
+    """
+
+    object_data = []
+
+    try:
+        text = extract_text(pdf_path)
+    except Exception as e:
+        print(f"Error extracting text from PDF: {e}")
+        return object_data
+
+    # Split the text into lines
+    lines = text.splitlines()
+
+    # Find the index of the "Objects" header
+    try:
+        header_index = lines.index("Objects")
+    except ValueError:
+        print("Error: 'Objects' header not found in the PDF.")
+        return object_data
+
+    # Iterate through lines starting from the header
+    current_object_data = ""
+    for i in range(header_index + 1, len(lines)):
+        line = lines[i].strip()
+
+        # Check if the line is empty or starts with a number (indicating a new row)
+        if not line or line.startswith(tuple(str(i) for i in range(10))):
+            if current_object_data:
+                object_data.append(current_object_data.strip())
+                current_object_data = ""
+        else:
+            current_object_data += line + " "
+
+    # Add the last object data (if any)
+    if current_object_data:
+        object_data.append(current_object_data.strip())
+
+    return object_data
+
+# Example usage
+pdf_path = "publicindex_latest-020125.pdf"  # Replace with the actual path
+object_data_list = extract_object_data(pdf_path)
+
+for data in object_data_list:
+    print(data)
