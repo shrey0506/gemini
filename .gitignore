@@ -366,3 +366,59 @@ for i, table in enumerate(tables):
     # Save table to CSV (optional)
     # table.to_csv(f'table_{i+1}.csv', index=False)
  
+import fitz  # PyMuPDF
+import pandas as pd
+
+def extract_text_blocks(pdf_path):
+    # Open the PDF file
+    doc = fitz.open(pdf_path)
+    text_blocks = []
+
+    # Extract text blocks with their bounding boxes
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+        blocks = page.get_text("blocks")  # Extract text blocks with coordinates
+        text_blocks.extend(blocks)
+
+    return text_blocks
+
+def reconstruct_table(text_blocks):
+    # Initialize variables to store table data
+    table_data = []
+    current_row = []
+
+    # Sort text blocks by their vertical position (top to bottom)
+    text_blocks.sort(key=lambda block: block[1])  # Sort by y1 coordinate (top of the block)
+
+    # Process text blocks to reconstruct the table
+    for block in text_blocks:
+        x0, y0, x1, y1, text, block_no, block_type = block
+        if text.strip():  # Skip empty blocks
+            # Split text into lines (for multiline cells)
+            lines = text.strip().split('\n')
+            for line in lines:
+                if line.strip():  # Skip empty lines
+                    current_row.append(line.strip())
+
+            # If the current row has enough columns, add it to the table data
+            if len(current_row) >= 6:  # Adjust based on the number of columns in your table
+                table_data.append(current_row)
+                current_row = []
+
+    # Convert the table data into a DataFrame
+    df = pd.DataFrame(table_data)
+    return df
+
+def main():
+    pdf_path = '1000031135.pdf'  # Replace with your PDF file path
+    text_blocks = extract_text_blocks(pdf_path)
+    reconstructed_table = reconstruct_table(text_blocks)
+
+    # Save the reconstructed table to a CSV file for verification
+    reconstructed_table.to_csv('reconstructed_table_with_multiline.csv', index=False)
+
+    # Print the reconstructed table
+    print(reconstructed_table)
+
+if __name__ == "__main__":
+    main()
