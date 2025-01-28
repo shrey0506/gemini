@@ -154,328 +154,91 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-from pdfminer.high_level import extract_text
-from tabula import read_pdf
+import re
 import pandas as pd
 
-def extract_tables_from_pdf(pdf_path):
-    """
-    Extracts tables from a PDF document using tabula.
 
-    Args:
-        pdf_path: Path to the PDF file.
+# Function to process the text and extract relevant information
+def process_text(text):
+    # Split the text into individual charity entries
+    charity_entries = re.split(r'(?m)^\d{3,4}\s', text)[1:]
+    charity_numbers = re.findall(r'(?m)^\d{3,4}', text)
 
-    Returns:
-        A list of pandas DataFrames, one for each table extracted.
-    """
+    # Initialize lists for each column
+    numbers = []
+    charities = []
+    objects = []
+    addresses = []
+    emails = []
+    websites = []
+    dates = []
 
-    try:
-        # Extract text from the PDF using pdfminer
-        text = extract_text(pdf_path)
-
-        # Attempt to extract tables using tabula
-        tables = read_pdf(pdf_path, pages='all', multiple_tables=True, encoding='utf-8')
-
-        # Check if tabula found any tables
-        if not tables:
-            print(f"No tables found in {pdf_path} using tabula.")
-            return []
-
-        # Clean up tables (optional)
-        cleaned_tables = []
-        for table in tables:
-            # Handle empty cells or NaN values
-            table = table.fillna('')
-            cleaned_tables.append(table)
-
-        return cleaned_tables
-
-    except Exception as e:
-        print(f"Error extracting tables from {pdf_path}: {e}")
-        return []
-
-# Replace 'path/to/your/pdf.pdf' with the actual path to your PDF file
-pdf_path = 'path/to/your/pdf.pdf' 
-
-tables = extract_tables_from_pdf(pdf_path)
-
-# Print the extracted tables (or save them to CSV/Excel)
-for i, table in enumerate(tables):
-    print(f"Table {i+1}:")
-    print(table)
-    # Save table to CSV (optional)
-    # table.to_csv(f'table_{i+1}.csv', index=False)
-
-
-
-
-
-
-
-
-from pdfminer.high_level import extract_text
-from pdfminer.layout import LTTextBoxHorizontal
-
-def extract_object_data(pdf_path):
-    """
-    Extracts the "Objects" column and its data from the given PDF file.
-
-    Args:
-        pdf_path: Path to the PDF file.
-
-    Returns:
-        A list of strings, where each string represents the "Objects" data for a row.
-    """
-
-    object_data = []
-
-    try:
-        text = extract_text(pdf_path)
-    except Exception as e:
-        print(f"Error extracting text from PDF: {e}")
-        return object_data
-
-    # Split the text into lines
-    lines = text.splitlines()
-
-    # Find the index of the "Objects" header
-    try:
-        header_index = lines.index("Objects")
-    except ValueError:
-        print("Error: 'Objects' header not found in the PDF.")
-        return object_data
-
-    # Iterate through lines starting from the header
-    current_object_data = ""
-    for i in range(header_index + 1, len(lines)):
-        line = lines[i].strip()
-
-        # Check if the line is empty or starts with a number (indicating a new row)
-        if not line or line.startswith(tuple(str(i) for i in range(10))):
-            if current_object_data:
-                object_data.append(current_object_data.strip())
-                current_object_data = ""
+    # Loop through each charity entry to extract information
+    for entry in charity_entries:
+        # Extract charity number
+        number_match = re.search(r'^\d{3,4}', entry)
+        if number_match:
+            numbers.append(number_match.group(0))
         else:
-            current_object_data += line + " "
+            numbers.append('')  # Fill with empty string if no match
+        
+        # Extract charity name
+        charity_match = re.search(r'^\d{3,4}\s([A-Z][A-Z0-9\s\-\(\)]*[A-Z\)])', entry)
+        if charity_match:
+            charities.append(charity_match.group(1).strip())
+        else:
+            charities.append('')  # Fill with empty string if no match
+        
+        # Extract objects (content before the address block)
+        object_match = re.search(r'^(.*?)(?=\n[^\n]*IM\d\s\d[A-Z]{2})', entry, re.DOTALL)
+        if object_match:
+            objects.append(object_match.group(1).strip())
+        else:
+            objects.append('')  # Fill with empty string if no match
+        
+        # Extract address (block ending with postal code)
+        address_match = re.search(r'([^\n]*\n)*[^\n]*IM\d\s\d[A-Z]{2}', entry, re.DOTALL)
+        if address_match:
+            addresses.append(address_match.group(0).strip())
+        else:
+            addresses.append('')  # Fill with empty string if no match
+        
+        # Extract email
+        email_match = re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', entry)
+        if email_match:
+            emails.append(email_match.group(0))
+        else:
+            emails.append('')  # Fill with empty string if no match
+        
+        # Extract website
+        website_match = re.search(r'(www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?)', entry)
+        if website_match:
+            websites.append(website_match.group(0))
+        else:
+            websites.append('')  # Fill with empty string if no match
+        
+        # Extract date
+        date_match = re.search(r'\d{1,2} [A-Za-z]{3} \d{4}|\d{4}', entry)
+        if date_match:
+            dates.append(date_match.group(0))
+        else:
+            dates.append('')  # Fill with empty string if no match
 
-    # Add the last object data (if any)
-    if current_object_data:
-        object_data.append(current_object_data.strip())
+    # Create a DataFrame
+    df = pd.DataFrame({
+        'No.': numbers,
+        'Charity': charities,
+        'Objects': objects,
+        'Correspondence address': addresses,
+        'Email address': emails,
+        'Website': websites,
+        'Date Registered': dates
+    })
 
-    return object_data
-
-# Example usage
-pdf_path = "publicindex_latest-020125.pdf"  # Replace with the actual path
-object_data_list = extract_object_data(pdf_path)
-
-for data in object_data_list:
-    print(data)
-
-
-
-
-from tabula import read_pdf
-import pandas as pd
-
-def extract_tables_from_pdf(pdf_path):
-    """
-    Extracts tables from a PDF document using tabula.
-
-    Args:
-        pdf_path: Path to the PDF file.
-
-    Returns:
-        A list of pandas DataFrames, one for each table extracted.
-    """
-
-    try:
-        # Attempt to extract tables using tabula
-        tables = read_pdf(pdf_path, pages='all', multiple_tables=True, encoding='utf-8')
-
-        # Check if tabula found any tables
-        if not tables:
-            print(f"No tables found in {pdf_path} using tabula.")
-            return []
-
-        # Clean up tables (optional)
-        cleaned_tables = []
-        for table in tables:
-            # Handle empty cells or NaN values
-            table = table.fillna('')
-            cleaned_tables.append(table)
-
-        return cleaned_tables
-
-    except Exception as e:
-        print(f"Error extracting tables from {pdf_path}: {e}")
-        return []
-
-
-
-///working code
-
-from pdfminer.high_level import extract_text
-from tabula import read_pdf
-import pandas as pd
-
-def extract_tables_from_pdf(pdf_path):
-    """
-    Extracts tables from a PDF document using tabula.
-
-    Args:
-        pdf_path: Path to the PDF file.
-
-    Returns:
-        A list of pandas DataFrames, one for each table extracted.
-    """
-
-    try:
-        # Extract text from the PDF using pdfminer
-        text = extract_text(pdf_path)
-
-        # Attempt to extract tables using tabula
-        tables = read_pdf(pdf_path, pages='all', multiple_tables=True, encoding='utf-8')
-
-        # Check if tabula found any tables
-        if not tables:
-            print(f"No tables found in {pdf_path} using tabula.")
-            return []
-
-        # Clean up tables (optional)
-        cleaned_tables = []
-        for table in tables:
-            # Handle empty cells or NaN values
-            table = table.fillna('')
-            cleaned_tables.append(table)
-
-        return cleaned_tables
-
-    except Exception as e:
-        print(f"Error extracting tables from {pdf_path}: {e}")
-        return []
-
-# Replace 'path/to/your/pdf.pdf' with the actual path to your PDF file
-# pdf_path = 'path/to/your/pdf.pdf' 
-pdf_path = "publicindex_latest-020125.pdf"
-
-tables = extract_tables_from_pdf(pdf_path)
-
-# Print the extracted tables (or save them to CSV/Excel)
-for i, table in enumerate(tables):
-  table.to_csv(f'table_{i+1}.csv', index=False)
-    # Save table to CSV (optional)
-    # table.to_csv(f'table_{i+1}.csv', index=False)
- 
-import fitz  # PyMuPDF
-import pandas as pd
-
-def extract_text_blocks(pdf_path):
-    # Open the PDF file
-    doc = fitz.open(pdf_path)
-    text_blocks = []
-
-    # Extract text blocks with their bounding boxes
-    for page_num in range(len(doc)):
-        page = doc.load_page(page_num)
-        blocks = page.get_text("blocks")  # Extract text blocks with coordinates
-        text_blocks.extend(blocks)
-
-    return text_blocks
-
-def reconstruct_table(text_blocks):
-    # Initialize variables to store table data
-    table_data = []
-    current_row = []
-
-    # Sort text blocks by their vertical position (top to bottom)
-    text_blocks.sort(key=lambda block: block[1])  # Sort by y1 coordinate (top of the block)
-
-    # Process text blocks to reconstruct the table
-    for block in text_blocks:
-        x0, y0, x1, y1, text, block_no, block_type = block
-        if text.strip():  # Skip empty blocks
-            # Split text into lines (for multiline cells)
-            lines = text.strip().split('\n')
-            for line in lines:
-                if line.strip():  # Skip empty lines
-                    current_row.append(line.strip())
-
-            # If the current row has enough columns, add it to the table data
-            if len(current_row) >= 6:  # Adjust based on the number of columns in your table
-                table_data.append(current_row)
-                current_row = []
-
-    # Convert the table data into a DataFrame
-    df = pd.DataFrame(table_data)
     return df
 
-def main():
-    pdf_path = '1000031135.pdf'  # Replace with your PDF file path
-    text_blocks = extract_text_blocks(pdf_path)
-    reconstructed_table = reconstruct_table(text_blocks)
+# Process the text and create the DataFrame
+df = process_text(text)
 
-    # Save the reconstructed table to a CSV file for verification
-    reconstructed_table.to_csv('reconstructed_table_with_multiline.csv', index=False)
-
-    # Print the reconstructed table
-    print(reconstructed_table)
-
-if __name__ == "__main__":
-    main()
-
-
-import cv2
-import pytesseract
-import pandas as pd
-
-# Set the path to the Tesseract executable (if not in PATH)
-# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-
-def preprocess_image(image_path):
-    # Load the image
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    
-    # Apply thresholding to binarize the image
-    _, binary_image = cv2.threshold(image, 150, 255, cv2.THRESH_BINARY)
-    
-    # Optional: Apply dilation to make text more prominent
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-    processed_image = cv2.dilate(binary_image, kernel, iterations=1)
-    
-    return processed_image
-
-def extract_table_from_image(image_path):
-    # Preprocess the image
-    processed_image = preprocess_image(image_path)
-    
-    # Use pytesseract to extract text with configuration for structured data
-    custom_config = r'--oem 3 --psm 6'  # OCR Engine Mode and Page Segmentation Mode
-    extracted_text = pytesseract.image_to_string(processed_image, config=custom_config)
-    
-    # Split the extracted text into lines
-    lines = extracted_text.splitlines()
-    
-    # Process lines to extract table data
-    table_data = []
-    for line in lines:
-        if line.strip():  # Skip empty lines
-            # Split line into columns (assuming columns are separated by spaces or tabs)
-            columns = line.split(maxsplit=5)  # Adjust maxsplit based on the number of columns
-            table_data.append(columns)
-    
-    # Convert the table data into a DataFrame
-    df = pd.DataFrame(table_data)
-    return df
-
-def main():
-    image_path = '1000031135.jpg'  # Replace with your image file path
-    extracted_table = extract_table_from_image(image_path)
-    
-    # Save the extracted table to a CSV file for verification
-    extracted_table.to_csv('extracted_table_from_image.csv', index=False)
-    
-    # Print the extracted table
-    print(extracted_table)
-
-if __name__ == "__main__":
-    main()
+# Display the DataFrame
+df.head()
