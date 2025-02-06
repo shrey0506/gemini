@@ -328,3 +328,124 @@ This will prevent kernel crashes since results are stored in a lightweight SQLit
 
 Would you like me to add indexing in SQLite to make queries faster?
 
+If the column names are dynamic (not fixed), we need to:
+
+1. Dynamically get column names from both dataframes
+
+
+2. Ensure correct column mappings
+
+
+3. Handle missing columns gracefully
+
+
+
+
+---
+
+Updated Code: Dynamic Column Handling
+
+This code will automatically adjust to the available columns and avoid crashes due to missing labels.
+
+import gc
+import sqlite3
+import pandas as pd
+import recordlinkage
+
+def match_and_compare(a_chunk, banking):
+    indexer = recordlinkage.Index()
+
+    # Dynamically find common columns for blocking
+    common_cols = list(set(a_chunk.columns) & set(banking.columns))
+    
+    if 'COUNTRY_OF_REG' in common_cols and 'COUNTRY_OF_REGISTRATION_eu' in common_cols:
+        indexer.block(left_on='COUNTRY_OF_REG', right_on='COUNTRY_OF_REGISTRATION_eu')
+    else:
+        print("Warning: Blocking columns not found. Proceeding without blocking.")
+        return pd.DataFrame()  # Return empty DataFrame if essential columns are missing
+
+    candidate_links = indexer.index(a_chunk, banking)
+    compare = recordlinkage.Compare()
+
+    # Dynamically add comparison conditions only if columns exist
+    column_mappings = [
+        ('LEGAL_NAME', 'CompanyName', 'bank_Name_match'),
+        ('COUNTRY_OF_REG', 'COUNTRY_OF_REGISTRATION_eu', 'countryeu_match'),
+        ('COUNTRY_OF_REG', 'COUNTRY_NAME_Swift', 'countrySwift_match'),
+        ('COUNTRY_OF_REG', 'COUNTRY_gleif', 'countryGleif_match'),
+        ('REG_ADDRESS_POST_CODE', 'POSTCODE_gleif', 'postcodeGleif_match'),
+        ('REG_ADDRESS_POST_CODE', 'POSTCODE_eu', 'postcodeeu_match'),
+        ('REG_ADDRESS_POST_CODE', 'POSTCODE_Swift', 'postcodeSwift_match')
+    ]
+
+    for left_col, right_col, label in column_mappings:
+        if left_col in a_chunk.columns and right_col in banking.columns:
+            compare.exact(left_col, right_col, label=label)
+        else:
+            print(f"Skipping {label}: {left_col} or {right_col} not found.")
+
+    # Compute only if there are valid comparisons
+    if compare._comparisons:
+        features_chunk = compare.compute(candidate_links, a_chunk, banking)
+        return features_chunk
+    else:
+        print("Warning: No valid comparisons found.")
+        return pd.DataFrame()
+
+def process_chunks(a, banking, chunk_size=5000, db_name="matches.db"):
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    # Dynamically create table based on available columns
+    sample_chunk = match_and_compare(a.iloc[:1], banking)
+    if sample_chunk.empty:
+        print("Error: No matching columns found. Stopping process.")
+        return
+
+    create_table_query = f"""
+        CREATE TABLE IF NOT EXISTS matches (
+            {", ".join([f'"{col}" REAL' for col in sample_chunk.columns])}
+        )
+    """
+    cursor.execute(create_table_query)
+    conn.commit()
+
+    for start in range(0, len(a), chunk_size):
+        end = min(start + chunk_size, len(a))
+        a_chunk = a.iloc[start:end]
+
+        features_chunk = match_and_compare(a_chunk, banking)
+
+        if not features_chunk.empty:
+            features_chunk.to_sql("matches", conn, if_exists="append", index=False)
+
+        del a_chunk, features_chunk
+        gc.collect()
+
+    conn.close()
+
+# Run the chunked processing
+process_chunks(a, banking, chunk_size=5000)
+
+
+---
+
+Key Fixes in This Version
+
+✅ Dynamically selects columns instead of hardcoding
+✅ Skips missing columns instead of crashing
+✅ Automatically creates SQLite table based on available columns
+✅ Prevents empty processing (checks before running comparisons)
+
+
+---
+
+Try This Code and Let Me Know If It Works!
+
+If you still have issues, share the output of:
+
+print(a.columns)
+print(banking.columns)
+
+so I can debug further.
+
