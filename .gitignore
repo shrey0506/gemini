@@ -242,3 +242,89 @@ df = process_text(text)
 
 # Display the DataFrame
 df.head()
+
+
+
+
+
+Here is your updated chunked record linkage code, optimized to store results in SQLite instead of keeping everything in memory. This will prevent the kernel from crashing due to memory limits.
+
+
+---
+
+Updated Code: Uses SQLite for Storing Matches
+
+import gc
+import sqlite3
+import pandas as pd
+import recordlinkage
+
+# Function to match and compare
+def match_and_compare(a_chunk, banking):
+    indexer = recordlinkage.Index()
+    indexer.block(left_on='COUNTRY_OF_REG', right_on='COUNTRY_OF_REGISTRATION_eu')
+    candidate_links = indexer.index(a_chunk, banking)
+
+    compare = recordlinkage.Compare()
+    compare.string('LEGAL_NAME', 'CompanyName', label='bank_Name_match')
+    compare.exact('COUNTRY_OF_REG', 'COUNTRY_OF_REGISTRATION_eu', label='countryeu_match')
+    compare.exact('COUNTRY_OF_REG', 'COUNTRY_NAME_Swift', label='countrySwift_match')
+    compare.exact('COUNTRY_OF_REG', 'COUNTRY_gleif', label='countryGleif_match')
+    compare.exact('REG_ADDRESS_POST_CODE', 'POSTCODE_gleif', label='postcodeGleif_match')
+    compare.exact('REG_ADDRESS_POST_CODE', 'POSTCODE_eu', label='postcodeeu_match')
+    compare.exact('REG_ADDRESS_POST_CODE', 'POSTCODE_Swift', label='postcodeSwift_match')
+
+    features_chunk = compare.compute(candidate_links, a_chunk, banking)
+    return features_chunk
+
+# Function to process chunks and store in SQLite
+def process_chunks(a, banking, chunk_size=5000, db_name="matches.db"):
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    # Create table if not exists
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS matches (
+            bank_Name_match REAL,
+            countryeu_match INTEGER,
+            countrySwift_match INTEGER,
+            countryGleif_match INTEGER,
+            postcodeGleif_match INTEGER,
+            postcodeeu_match INTEGER,
+            postcodeSwift_match INTEGER
+        )
+    """)
+    conn.commit()
+
+    for start in range(0, len(a), chunk_size):
+        end = min(start + chunk_size, len(a))
+        a_chunk = a.iloc[start:end]
+
+        features_chunk = match_and_compare(a_chunk, banking)
+
+        # Append to SQLite database
+        features_chunk.to_sql("matches", conn, if_exists="append", index=False)
+
+        # Free memory
+        del a_chunk, features_chunk
+        gc.collect()
+
+    conn.close()
+
+# Run the chunked processing
+process_chunks(a, banking, chunk_size=5000)
+
+
+---
+
+Key Improvements
+
+✅ Uses SQLite instead of keeping results in memory
+✅ Writes in chunks, preventing memory buildup
+✅ Efficient candidate reduction with blocking (COUNTRY_OF_REG)
+✅ Garbage collection (gc.collect()) to free memory
+
+This will prevent kernel crashes since results are stored in a lightweight SQLite database.
+
+Would you like me to add indexing in SQLite to make queries faster?
+
