@@ -1,0 +1,96 @@
+import os
+import langchain
+import langgraph
+import requests
+from flask import Flask, request, jsonify
+from langchain.llms import OpenAI, HuggingFaceHub
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+from langchain.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader, UnstructuredPowerPointLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import FAISS
+from langchain.embeddings import OpenAIEmbeddings
+
+# Initialize Flask app (Controller in MVC)
+app = Flask(__name__)
+
+# Load environment variables for API keys
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+HUGGINGFACEHUB_API_KEY = os.getenv("HUGGINGFACEHUB_API_KEY")
+
+# Define available models (Model in MVC)
+MODELS = {
+    "openai": OpenAI(model_name="gpt-4", openai_api_key=OPENAI_API_KEY),
+    "huggingface": HuggingFaceHub(repo_id="facebook/bart-large-cnn", huggingfacehub_api_token=HUGGINGFACEHUB_API_KEY)
+}
+
+VECTOR_DB = None
+
+def load_and_index_document(file_url):
+    """Loads document from GCS signed URL and indexes it."""
+    global VECTOR_DB
+    response = requests.get(file_url)
+    file_path = "/tmp/uploaded_file"
+    
+    with open(file_path, "wb") as f:
+        f.write(response.content)
+    
+    if file_url.endswith(".pdf"):
+        loader = PyPDFLoader(file_path)
+    elif file_url.endswith(".docx"):
+        loader = UnstructuredWordDocumentLoader(file_path)
+    elif file_url.endswith(".pptx"):
+        loader = UnstructuredPowerPointLoader(file_path)
+    else:
+        return "Unsupported file format"
+    
+    documents = loader.load()
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    chunks = text_splitter.split_documents(documents)
+    
+    VECTOR_DB = FAISS.from_documents(chunks, OpenAIEmbeddings())
+    return "Document successfully indexed"
+
+def create_summary_chain(model_name):
+    """Creates an LLM chain for text summarization."""
+    if model_name not in MODELS:
+        raise ValueError("Invalid model selected")
+    
+    prompt = PromptTemplate(template="Summarize the following text:\n{text}", input_variables=["text"])
+    chain = LLMChain(llm=MODELS[model_name], prompt=prompt)
+    return chain
+
+def query_document(query):
+    """Retrieves the most relevant text chunk from the indexed document and answers the query."""
+    if VECTOR_DB is None:
+        return "No document indexed yet. Please upload a document first."
+    
+    docs = VECTOR_DB.similarity_search(query, k=3)
+    context = "\n".join([doc.page_content for doc in docs])
+    prompt = f"Answer the question based on the document:\nContext:\n{context}\n\nQuestion: {query}\nAnswer:"
+    model = MODELS["openai"]
+    return model(prompt)
+
+@app.route("/upload", methods=["POST"])
+def upload_document():
+    """Handles document upload and indexing."""
+    data = request.json
+    file_url = data.get("file_url")
+    
+    if not file_url:
+        return jsonify({"error": "Missing file URL"}), 400
+    
+    message = load_and_index_document(file_url)
+    return jsonify({"message": message})
+
+@app.route("/ask", methods=["POST"])
+def ask_question():
+    """Handles querying the uploaded document."""
+    data = request.json
+    query = data.get("query", "")
+    
+    answer = query_document(query)
+    return jsonify({"answer": answer})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
