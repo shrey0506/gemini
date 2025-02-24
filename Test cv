@@ -1,0 +1,139 @@
+Here’s a complete Python script that:
+
+1. Converts the first page of the PDF to an image
+
+
+2. Identifies dominant colors (K-Means clustering)
+
+
+3. Extracts table headers and rows based on detected colors
+
+
+4. Uses OCR (Tesseract) to extract text from headers and rows
+
+
+5. Saves the extracted data as a CSV file
+
+
+
+
+---
+
+Full Script (extract_table_from_pdf.py)
+
+import cv2
+import numpy as np
+import pandas as pd
+import pytesseract
+from pdf2image import convert_from_path
+from collections import Counter
+import csv
+
+# File paths
+pdf_path = "/mnt/data/file-K5nLLYJLWhYnZFxdBBihUK"
+image_path = "/mnt/data/page_1.png"
+csv_output_path = "/mnt/data/extracted_table.csv"
+
+### 1️⃣ Convert PDF Page to Image ###
+images = convert_from_path(pdf_path, dpi=300)
+images[0].save(image_path, "PNG")
+
+
+### 2️⃣ Identify Dominant Colors in Table ###
+def get_dominant_colors(image_path, k=5):
+    """Detects dominant colors in an image using K-Means clustering."""
+    img = cv2.imread(image_path)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.reshape((-1, 3))  # Flatten image pixels
+
+    # Apply K-Means clustering
+    kmeans = cv2.KMeans(n_clusters=k, random_state=0, n_init=10)
+    kmeans.fit(img)
+    colors = kmeans.cluster_centers_.astype(int)
+
+    # Count occurrences
+    labels = kmeans.labels_
+    counts = Counter(labels)
+
+    # Sort colors by frequency
+    sorted_colors = [colors[i] for i in counts.keys()]
+    return sorted_colors
+
+# Get top colors
+dominant_colors = get_dominant_colors(image_path)
+header_color = dominant_colors[0]  # Assume first dominant color is header
+row_color = dominant_colors[1]  # Assume second is alternating row
+
+
+### 3️⃣ Extract Table Rows Based on Colors ###
+def extract_colored_regions(image_path, target_rgb, threshold=30):
+    """Extracts regions matching a target color."""
+    img = cv2.imread(image_path)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    # Convert target RGB to HSV
+    target_hsv = cv2.cvtColor(np.uint8([[target_rgb]]), cv2.COLOR_RGB2HSV)[0][0]
+
+    # Define color range
+    lower_bound = np.array([max(target_hsv[0] - threshold, 0), 50, 50])
+    upper_bound = np.array([min(target_hsv[0] + threshold, 180), 255, 255])
+
+    # Create mask for the selected color
+    mask = cv2.inRange(hsv, lower_bound, upper_bound)
+    
+    # Find contours
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    return contours
+
+# Extract headers and rows
+header_contours = extract_colored_regions(image_path, header_color)
+row_contours = extract_colored_regions(image_path, row_color)
+
+
+### 4️⃣ Extract Text from Regions Using OCR ###
+def extract_text_from_regions(image_path, contours):
+    """Extracts text from detected contours using Tesseract OCR."""
+    img = cv2.imread(image_path)
+    extracted_text = []
+
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        roi = img[y:y+h, x:x+w]  # Extract region
+
+        # OCR to extract text
+        text = pytesseract.image_to_string(roi, config="--psm 6").strip()
+        extracted_text.append(text)
+
+    return extracted_text
+
+# Get text data
+header_text = extract_text_from_regions(image_path, header_contours)
+row_text = extract_text_from_regions(image_path, row_contours)
+
+
+### 5️⃣ Save Extracted Data to CSV ###
+df = pd.DataFrame({"Header": header_text, "Row Data": row_text})
+df.to_csv(csv_output_path, index=False, quoting=csv.QUOTE_ALL)
+
+print(f"Table extracted and saved to {csv_output_path}")
+
+
+---
+
+How It Works
+
+✔ Automatically detects colors in the table (so no manual tuning required).
+✔ Extracts headers and alternating rows dynamically based on colors.
+✔ Uses OCR to extract text from detected areas.
+✔ Saves structured table data to CSV instead of images.
+
+
+---
+
+Output Example (extracted_table.csv)
+
+
+---
+
+Would you like any improvements? 🚀
+
