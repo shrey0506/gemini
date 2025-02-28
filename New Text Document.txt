@@ -96,6 +96,91 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
 
 
+
+!pip install pdfplumber pandas
+
+import pdfplumber
+import pandas as pd
+import numpy as np
+
+# Define the PDF file path
+pdf_file = 'onepageisleofman.pdf'
+
+# Threshold for grouping lines as a single row (adjust if needed)
+y_threshold = 5
+
+# Column boundaries (based on your specified ranges)
+columns = [0, 50, 150, 370, 490, 600, 720, 820]
+
+# Function to group text by row and stitch multiline cells
+def extract_and_stitch(pdf_file, columns, y_threshold):
+    rows = []
+
+    # Open the PDF file
+    with pdfplumber.open(pdf_file) as pdf:
+        # Iterate through each page
+        for page in pdf.pages:
+            # Extract text with positional data
+            words = page.extract_words()
+            
+            # Sort words by y-coordinate (top to bottom)
+            words.sort(key=lambda w: w['top'])
+            
+            # Group words by row using y-coordinates
+            current_row = []
+            last_y = None
+            
+            for word in words:
+                # Check if the word starts a new row
+                if last_y is None or abs(word['top'] - last_y) > y_threshold:
+                    # If a new row starts, save the current row
+                    if current_row:
+                        rows.append(current_row)
+                    # Start a new row
+                    current_row = [word]
+                else:
+                    # Continue in the same row
+                    current_row.append(word)
+                
+                # Update last_y for the next iteration
+                last_y = word['top']
+            
+            # Append the last accumulated row
+            if current_row:
+                rows.append(current_row)
+
+    # Convert the rows into a DataFrame
+    data = []
+    for row in rows:
+        # Create a blank row for each column
+        row_data = [''] * (len(columns) - 1)
+        
+        # Place each word into the correct column
+        for word in row:
+            x_mid = (word['x0'] + word['x1']) / 2
+            for i, (col_start, col_end) in enumerate(zip(columns[:-1], columns[1:])):
+                if col_start <= x_mid < col_end:
+                    row_data[i] += ' ' + word['text']
+                    break
+        
+        # Strip leading/trailing spaces
+        row_data = [cell.strip() for cell in row_data]
+        data.append(row_data)
+
+    # Create DataFrame and save to CSV
+    df = pd.DataFrame(data, columns=[f'Column {i+1}' for i in range(len(columns)-1)])
+    df.to_csv('stitched_pdfplumber_table.csv', index=False)
+    return df
+
+# Run the extraction and stitching process
+stitched_df = extract_and_stitch(pdf_file, columns, y_threshold)
+
+# Display the stitched DataFrame
+print("\nStitched Table Preview:")
+print(stitched_df.head())
+
+
+
 pattern = re.compile(r'\d{3,4}\s+([A-Z][A-Z\s\-\']+)(?:\n|$)', re.MULTILINE)
 
 # Finding all matches
