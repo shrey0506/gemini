@@ -185,3 +185,100 @@ pattern = re.compile(r'\d{3,4}\s+([A-Z][A-Z\s\-\']+)(?:\n|$)', re.MULTILINE)
 
 # Finding all matches
 charities = pattern.findall(pdf_text)
+
+
+
+
+
+
+
+
+
+!pip install pymupdf pandas
+
+import fitz  # PyMuPDF
+import pandas as pd
+
+# Define the PDF file path
+pdf_file = 'onepageisleofman.pdf'
+
+# Column boundaries (based on your specified ranges)
+columns = [0, 50, 150, 370, 490, 600, 720, 820]
+
+# Threshold for grouping lines as a single row (adjust if needed)
+y_threshold = 5
+
+# Function to extract and stitch text by row using PyMuPDF
+def extract_and_stitch_pymupdf(pdf_file, columns, y_threshold):
+    rows = []
+
+    # Open the PDF file
+    pdf = fitz.open(pdf_file)
+    
+    # Iterate through each page
+    for page in pdf:
+        # Extract text with positional data
+        words = page.get_text("words")  # Returns list of (x0, y0, x1, y1, text, block_no, line_no, word_no)
+        
+        # Sort words by y-coordinate (top to bottom)
+        words.sort(key=lambda w: w[1])  # Sort by y0
+        
+        # Group words by row using y-coordinates
+        current_row = []
+        last_y = None
+        
+        for word in words:
+            # Check if the word starts a new row
+            if last_y is None or abs(word[1] - last_y) > y_threshold:
+                # If a new row starts, save the current row
+                if current_row:
+                    rows.append(current_row)
+                # Start a new row
+                current_row = [word]
+            else:
+                # Continue in the same row
+                current_row.append(word)
+            
+            # Update last_y for the next iteration
+            last_y = word[1]
+        
+        # Append the last accumulated row
+        if current_row:
+            rows.append(current_row)
+    
+    # Close the PDF file
+    pdf.close()
+
+    # Convert the rows into a DataFrame
+    data = []
+    for row in rows:
+        # Create a blank row for each column
+        row_data = [''] * (len(columns) - 1)
+        
+        # Place each word into the correct column
+        for word in row:
+            x_mid = (word[0] + word[2]) / 2  # Midpoint of the word in x-direction
+            for i, (col_start, col_end) in enumerate(zip(columns[:-1], columns[1:])):
+                if col_start <= x_mid < col_end:
+                    row_data[i] += ' ' + word[4]
+                    break
+        
+        # Strip leading/trailing spaces
+        row_data = [cell.strip() for cell in row_data]
+        data.append(row_data)
+
+    # Create DataFrame and save to CSV
+    df = pd.DataFrame(data, columns=[f'Column {i+1}' for i in range(len(columns)-1)])
+    output_file = 'fixed_pymupdf_table.csv'
+    df.to_csv(output_file, index=False)
+    return df, output_file
+
+# Run the extraction and stitching process
+stitched_df, output_file = extract_and_stitch_pymupdf(pdf_file, columns, y_threshold)
+
+# Display the stitched DataFrame
+print("\nStitched Table Preview:")
+print(stitched_df.head())
+
+output_file
+
