@@ -1,6 +1,0 @@
-fastapi
-langchain
-pydantic
-sqlalchemy
-psycopg2
-pdfminer.six

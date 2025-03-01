@@ -1,0 +1,16 @@
+# config.yaml - Model configurations
+
+models:
+  gemini:
+    project_id: "your_gcp_project_id"
+
+  llama:
+    project_id: "your_gcp_project_id"
+
+database:
+  alloydb:
+    dbname: "your_db"
+    user: "your_user"
+    password: "your_password"
+    host: "your_host"
+    port: "5432"
