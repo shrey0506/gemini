@@ -1,0 +1,92 @@
+Since your extracted text is a single string (not a list), we need to process it as a whole and extract addresses correctly before inserting them into a DataFrame. Below is the corrected approach to handle a single string input properly.
+
+
+---
+
+Updated Python Script for DataFrame Creation
+
+import re
+import pandas as pd
+
+def extract_addresses(text):
+    # Improved Regular Expression Pattern
+    pattern = r'\b(?:\d+\s*)?(?:[A-Z][a-z]+(?:[-\s][A-Z][a-z]+)*|\b(?:of|and)\b)(?:[-\s][A-Z][a-z]+)*\b'
+
+    # Extract matches
+    matches = re.findall(pattern, text)
+
+    # Post-processing: Removing isolated "of" and "and"
+    cleaned_addresses = []
+    temp_address = []
+
+    for word in matches:
+        if word.lower() in {"of", "and"}:
+            temp_address.append(word)  # Keep "of" and "and" only if they are inside an address
+        else:
+            if temp_address:
+                temp_address.append(word)
+                cleaned_addresses.append(" ".join(temp_address))  # Combine valid parts into an address
+                temp_address = []  # Reset for the next address
+            else:
+                cleaned_addresses.append(word)
+
+    return cleaned_addresses
+
+# Read file content (as a string)
+file_path = "/mnt/data/file-9Qmk3SKhTufxRvFrPuXvrA"
+
+with open(file_path, "r", encoding="utf-8") as file:
+    output_text = file.read()  # Read as a single string
+
+# Extracting addresses from the string
+extracted_addresses = extract_addresses(output_text)
+
+# Create DataFrame with extracted addresses
+df = pd.DataFrame({"Extracted_Addresses": extracted_addresses})
+
+# Display DataFrame
+print(df)
+
+# Save to CSV (Optional)
+df.to_csv("/mnt/data/extracted_addresses.csv", index=False)
+
+
+---
+
+Key Fixes
+
+1. Handles Single String Input Correctly:
+
+Processes the entire text as a single string.
+
+Extracts meaningful address phrases instead of isolated words.
+
+
+
+2. Improved Grouping Logic:
+
+Ensures "of" and "and" are retained only within an address.
+
+Avoids storing them as standalone words.
+
+
+
+3. Stores Data in a DataFrame Properly:
+
+Each extracted address becomes a row in the Extracted_Addresses column.
+
+
+
+
+
+---
+
+Next Steps
+
+Run the script and check if addresses appear correctly in the DataFrame.
+
+If needed, you can fine-tune the regex for better accuracy.
+
+
+Let me know if you need additional refinements!
+
