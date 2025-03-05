@@ -1,0 +1,134 @@
+From the image you shared, I can see that the text extracted from the PDF contains multiline entries, where each charity's details are spread across multiple lines. The structure seems to have:
+
+1. Charity Number
+
+
+2. Charity Name
+
+
+3. Objects (Description)
+
+
+4. Correspondence Address
+
+
+5. Email Address
+
+
+6. Website
+
+
+7. Date Registered
+
+
+
+Additionally, some fields (like "Objects") span multiple lines, and some charities are marked as Removed from Register with a Reason.
+
+
+---
+
+Approach to Convert This into CSV
+
+1. Extract text from the PDF.
+
+
+2. Identify patterns to segment the records correctly (e.g., numbers at the beginning for charity number, URLs for website fields, etc.).
+
+
+3. Handle multiline text correctly by merging relevant parts into the same row.
+
+
+4. Save it into a structured CSV file.
+
+
+
+
+---
+
+Python Code to Process This Text
+
+import re
+import csv
+
+# Sample extracted text from PDF (Replace this with actual PDF text extraction)
+text = """
+1332 BARROVIAN FOUNDATION UK \nCIO, THEN\The trustees shall hold the capital and income of the trust funds\upon trust...
+foundation@kwc.im\n28 Mar 2022\n
+1566 BALMEE (MANX) SCHOLARSHIP FUND, THEN\Removed from Register on 25 June 2022\n
+1267 BEACH BUDDIES\nRemoved from register on 13 July 2020\nReason: Ceased to exist\n...
+berrybuddies@manx.net\n27 July 2018\n
+"""
+
+# Regular expression patterns to match Charity entries
+charity_pattern = re.compile(r"(\d{3,4})\s+([A-Z\s]+),?\s*(.*?)(\d{2}\s\w+\s\d{4})?", re.DOTALL)
+
+# Extract structured data
+structured_data = []
+header = ["No.", "Charity Name", "Objects", "Correspondence Address", "Email Address", "Website", "Date Registered"]
+structured_data.append(header)
+
+for match in charity_pattern.finditer(text):
+    charity_no = match.group(1).strip()
+    name = match.group(2).strip()
+    objects = match.group(3).strip()
+    date_registered = match.group(4).strip() if match.group(4) else ""
+
+    # Extracting email and website if available
+    email = re.findall(r"[\w\.-]+@[\w\.-]+\.\w+", objects)
+    website = re.findall(r"https?://\S+", objects)
+    
+    email = email[0] if email else ""
+    website = website[0] if website else ""
+
+    # Remove email/website from description
+    objects = objects.replace(email, "").replace(website, "").strip()
+
+    structured_data.append([charity_no, name, objects, "", email, website, date_registered])
+
+# Save as CSV
+csv_file = "charities.csv"
+with open(csv_file, "w", newline="", encoding="utf-8") as file:
+    writer = csv.writer(file)
+    writer.writerows(structured_data)
+
+print(f"CSV file saved: {csv_file}")
+
+
+---
+
+How This Works
+
+1. Regex-based Extraction:
+
+Detects charity number (3 or 4 digits).
+
+Captures the name and description.
+
+Extracts email, website, and registration date if available.
+
+
+
+2. Removes Redundant Data:
+
+Emails & websites are pulled separately and removed from descriptions.
+
+
+
+3. Handles Removed Charities:
+
+Checks if an entry is "Removed from Register" and stores the reason.
+
+
+
+4. Outputs Clean CSV with structured columns.
+
+
+
+
+---
+
+Next Steps
+
+If this doesn't fully align with your data format, share more structured extracted text, and I will fine-tune the approach.
+
+
