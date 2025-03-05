@@ -1,0 +1,81 @@
+I'll write a Python script to extract addresses from text based on the pattern described in the image. Then, I'll explain each part of the script.
+
+
+---
+
+Address Pattern Rules (as per the image)
+
+1. Camel Case Words: Each word starts with an uppercase letter (except "of" and "and").
+
+
+2. Numbers and Hyphens: The text may start with numbers and contain hyphens between numbers or words.
+
+
+3. Exceptions: "of" and "and" remain lowercase.
+
+
+
+
+---
+
+Python Script to Extract Address
+
+import re
+
+def extract_addresses(text):
+    # Regular Expression Pattern
+    pattern = r'\b(?:\d+[-\d]*)?(?:[A-Z][a-z]*|\b(?:of|and)\b)(?:[-\s][A-Z][a-z]*)*\b'
+
+    # Extract matches
+    matches = re.findall(pattern, text)
+
+    # Filter out unwanted matches
+    addresses = [match.strip() for match in matches if len(match) > 2]
+    
+    return addresses
+
+# Example Text (You can replace this with reading a file)
+text = """123 Main-Street of California, 456-78 Elm-Road and NewYork Avenue, 
+          789A Baker-Street and Hill-Road, 100 of the Town-Center"""
+
+# Extracting addresses
+extracted_addresses = extract_addresses(text)
+print(extracted_addresses)
+
+
+---
+
+Explanation of the Script
+
+1. Regex Pattern (pattern):
+
+\b(?:\d+[-\d]*)? → Matches numbers (e.g., 123, 456-78, or 789A).
+
+(?:[A-Z][a-z]*|\b(?:of|and)\b) → Matches words in Camel Case (Main, Street, NewYork), except "of" and "and".
+
+(?:[-\s][A-Z][a-z]*)* → Allows hyphens or spaces between words (Main-Street, Hill-Road).
+
+\b → Ensures word boundaries.
+
+
+
+2. re.findall(pattern, text) → Extracts all matching address patterns.
+
+
+3. Filter Unwanted Matches:
+
+The script removes short or incorrect matches.
+
+
+
+
+
+---
+
+Expected Output
+
+['123 Main-Street of California', '456-78 Elm-Road and NewYork Avenue', 
+ '789A Baker-Street and Hill-Road', '100 of the Town-Center']
+
+Would you like me to modify it further based on your specific file content? Let me know!
+
