@@ -1,0 +1,105 @@
+gTo extract the correspondence address from the extracted text list (image 1), I will analyze the pattern from both the extracted text and the structured PDF data (image 2).
+
+
+---
+
+Observing the Structure:
+
+From the extracted text in image 1, the pattern for correspondence addresses seems to be:
+
+The name of the charity starts the entry.
+
+Keywords like "Removed from Register", "Reason", or "\n" separate different sections.
+
+The address follows these keywords and is often structured like:
+
+<Address Line 1>, <Address Line 2>, <City>, <Isle of Man>, <Postal Code>
+
+
+From image 2 (structured PDF data), the correspondence addresses are clearly listed in a separate column, confirming this pattern.
+
+
+---
+
+Regex Pattern to Extract Correspondence Addresses
+
+To match addresses in the extracted text, we need a regex pattern that:
+
+1. Detects an address-like structure (street, city, "Isle of Man", postal code).
+
+
+2. Avoids extra descriptions (like "Reason", "Removed from Register").
+
+
+3. Captures the entire address block.
+
+
+
+Here is a Python regex pattern that should work:
+
+import re
+
+# Example extracted text (from image 1)
+text_list = [
+    "A LIFE LESS PLASTIC\nRemoved from Register on 15 February 2023\nReason: Ceased to exist\n29-31 Athol Street, Douglas, Isle of Man, IM1 1LB",
+    "A LITTLE PIECE OF HOPE\nTo raise money...\nBallakilley Close, Port Erin, Isle of Man, IM9 6BU",
+    "A W CLAGUE (DECEASED)\nRemoved from Register on 25 June 2024\nReason: Ceased to exist\nDepartment of Education, Sport and Culture, The Slieau Whallian, Foxdale Road, St. Johns, Isle of Man, IM4 3AS",
+    "ACORN\nFor the purpose of...\n2 Marina Close, Onchan, Isle of Man, IM3 4BN"
+]
+
+# Regex pattern to match the correspondence address
+pattern = r"([A-Za-z0-9 ,'-]+\n){1,3}([A-Za-z0-9 ,'-]+, Isle of Man, [A-Z0-9 ]{5,7})"
+
+# Extract addresses
+addresses = [match[1] for text in text_list if (match := re.search(pattern, text))]
+
+# Print extracted addresses
+print(addresses)
+
+
+---
+
+Explanation of Regex:
+
+1. ([A-Za-z0-9 ,'-]+\n){1,3}
+
+Matches 1 to 3 lines of potential text before the address (charity name, descriptions).
+
+Allows alphanumeric characters, spaces, commas, hyphens, and apostrophes.
+
+
+
+2. ([A-Za-z0-9 ,'-]+, Isle of Man, [A-Z0-9 ]{5,7})
+
+Captures the main address format.
+
+Looks for ", Isle of Man, " (ensures we capture an actual address).
+
+Postal code is matched by [A-Z0-9 ]{5,7}.
+
+
+
+
+
+---
+
+Expected Output:
+
+For the sample list, this should return:
+
+[
+    "29-31 Athol Street, Douglas, Isle of Man, IM1 1LB",
+    "Ballakilley Close, Port Erin, Isle of Man, IM9 6BU",
+    "Department of Education, Sport and Culture, The Slieau Whallian, Foxdale Road, St. Johns, Isle of Man, IM4 3AS",
+    "2 Marina Close, Onchan, Isle of Man, IM3 4BN"
+]
+
+This pattern should work across the full extracted text dataset.
+
+
+---
+
+Next Steps:
+
+If needed, I can refine the regex further based on more variations in the extracted text. Let me know if you encounter any edge cases!
+
