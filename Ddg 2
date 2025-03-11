@@ -1,0 +1,52 @@
+g
+If DuckDuckGo is hitting rate limit (HTTP 202 error), you can try the Lite version but modify it to get titles, URLs, and descriptions:
+
+
+---
+
+🔹 Updated DuckDuckGo Lite Scraper (Title + URL + Snippet)
+
+import requests
+from bs4 import BeautifulSoup
+
+def duckduckgo_lite_search(query, max_results=3):
+    url = f"https://lite.duckduckgo.com/lite/?q={query.replace(' ', '+')}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    results = []
+    for result in soup.select(".result")[:max_results]:
+        title_tag = result.select_one("a.result-link")
+        snippet_tag = result.find_next_sibling("div")
+
+        title = title_tag.text.strip() if title_tag else "No title"
+        url = title_tag["href"] if title_tag else "No URL"
+        snippet = snippet_tag.text.strip() if snippet_tag else "No description"
+
+        results.append({"title": title, "url": url, "snippet": snippet})
+
+    return results
+
+# Run search
+results = duckduckgo_lite_search("latest AI trends")
+for res in results:
+    print(f"Title: {res['title']}\nURL: {res['url']}\nSnippet: {res['snippet']}\n")
+
+
+---
+
+✅ Why Use This?
+
+No API Key Required
+
+Bypasses DuckDuckGo API rate limits
+
+Uses DuckDuckGo Lite (faster & lightweight)
+
+Extracts title, URL, AND description/snippet
+
+
+🚀 Try this out and let me know if you need modifications!
+
