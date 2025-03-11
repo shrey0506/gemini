@@ -1,0 +1,143 @@
+j
+If serpscrap and DDGS() are causing issues due to rate limits or installation failures, here are some non-API alternatives to scrape Bing safely:
+
+
+---
+
+1️⃣ Using Selenium for Bing Search (Best Non-API Alternative)
+
+This method mimics a real user, reducing the chances of getting blocked.
+
+Install Dependencies:
+
+pip install selenium webdriver-manager
+
+Python Code for Bing Search:
+
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+import time
+
+def bing_search(query, max_results=3):
+    options = Options()
+    options.add_argument("--headless")  # Run without opening browser
+    options.add_argument("--disable-blink-features=AutomationControlled")  # Bypass detection
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    driver.get(f"https://www.bing.com/search?q={query.replace(' ', '+')}")
+    time.sleep(2)  # Allow time for results to load
+
+    results = []
+    for i, result in enumerate(driver.find_elements(By.CSS_SELECTOR, "li.b_algo")[:max_results]):
+        title = result.find_element(By.TAG_NAME, "h2").text
+        url = result.find_element(By.TAG_NAME, "a").get_attribute("href")
+        snippet = result.find_element(By.CLASS_NAME, "b_caption").text if result.find_elements(By.CLASS_NAME, "b_caption") else ""
+        results.append({"title": title, "url": url, "snippet": snippet})
+
+    driver.quit()
+    return results
+
+# Run search
+results = bing_search("latest AI trends")
+for res in results:
+    print(f"Title: {res['title']}\nURL: {res['url']}\nSnippet: {res['snippet']}\n")
+
+✅ Pros: Works reliably, mimics real user behavior
+❌ Cons: Requires chromedriver, might need IP rotation for large-scale searches
+
+
+---
+
+2️⃣ Using requests + BeautifulSoup to Scrape Bing
+
+This is faster than Selenium, but Bing may block your IP after repeated use.
+
+Install Dependencies:
+
+pip install requests beautifulsoup4
+
+Python Code for Bing Search:
+
+import requests
+from bs4 import BeautifulSoup
+
+def bing_search(query, max_results=3):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+    response = requests.get(f"https://www.bing.com/search?q={query.replace(' ', '+')}", headers=headers)
+    
+    soup = BeautifulSoup(response.text, "html.parser")
+    results = []
+    
+    for result in soup.select("li.b_algo")[:max_results]:
+        title = result.select_one("h2").text
+        url = result.select_one("h2 a")["href"]
+        snippet = result.select_one(".b_caption p").text if result.select_one(".b_caption p") else ""
+        results.append({"title": title, "url": url, "snippet": snippet})
+
+    return results
+
+# Run search
+results = bing_search("latest AI trends")
+for res in results:
+    print(f"Title: {res['title']}\nURL: {res['url']}\nSnippet: {res['snippet']}\n")
+
+✅ Pros: Faster, no browser needed
+❌ Cons: Bing may detect scraping and block your IP (use proxies if needed)
+
+
+---
+
+3️⃣ Use Startpage (Google Proxy) for Anonymous Search
+
+Startpage is a privacy-focused search engine that fetches Google results anonymously. This avoids Google CAPTCHA blocks.
+
+Install Dependencies:
+
+pip install requests beautifulsoup4
+
+Python Code for Startpage Search:
+
+import requests
+from bs4 import BeautifulSoup
+
+def startpage_search(query, max_results=3):
+    url = f"https://www.startpage.com/sp/search?q={query.replace(' ', '+')}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(url, headers=headers)
+    
+    soup = BeautifulSoup(response.text, "html.parser")
+    results = []
+    
+    for result in soup.select(".w-gl__result")[:max_results]:
+        title = result.select_one(".w-gl__title").text
+        url = result.select_one(".w-gl__result-url").text
+        snippet = result.select_one(".w-gl__description").text
+        results.append({"title": title, "url": url, "snippet": snippet})
+
+    return results
+
+# Run search
+results = startpage_search("latest AI trends")
+for res in results:
+    print(f"Title: {res['title']}\nURL: {res['url']}\nSnippet: {res['snippet']}\n")
+
+✅ Pros: Uses Google results, but avoids blocks
+❌ Cons: Not as widely tested as Bing or DuckDuckGo
+
+
+---
+
+🚀 Which One Should You Use?
+
+👉 For Best Reliability: Use Selenium-based Bing scraping
+👉 For Speed: Use Startpage scraping
+
+Would you like me to integrate one of these into your Agentic AI application? 🚀
+
