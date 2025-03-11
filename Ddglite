@@ -1,0 +1,91 @@
+g
+If you need more free search APIs, here are additional options:
+
+
+---
+
+🔹 4. Brave Search API (50 Free Searches per Day)
+
+Free Tier: 50 searches/day
+
+Website: https://search.brave.com
+
+Docs: https://api.search.brave.com/
+
+
+Example Code:
+
+import requests
+
+API_KEY = "your_brave_api_key"
+query = "latest AI trends"
+url = f"https://api.search.brave.com/res/v1/web/search?q={query}"
+
+headers = {"Accept": "application/json", "X-Subscription-Token": API_KEY}
+response = requests.get(url, headers=headers)
+
+print(response.json())
+
+✅ Pros: Privacy-focused, 50 searches per day
+❌ Cons: Limited to Brave’s search index
+
+
+---
+
+🔹 5. DuckDuckGo Lite API (Unofficial but Free)
+
+No API Key Needed
+
+Website: https://lite.duckduckgo.com
+
+
+Example Code:
+
+import requests
+from bs4 import BeautifulSoup
+
+def duckduckgo_search(query, max_results=3):
+    url = f"https://lite.duckduckgo.com/lite/?q={query.replace(' ', '+')}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(url, headers=headers)
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    results = []
+
+    for link in soup.select("a.result-link")[:max_results]:
+        title = link.text
+        url = link["href"]
+        results.append({"title": title, "url": url})
+
+    return results
+
+# Run search
+results = duckduckgo_search("latest AI trends")
+for res in results:
+    print(f"Title: {res['title']}\nURL: {res['url']}\n")
+
+✅ Pros: No API key required, avoids rate limits
+❌ Cons: Limited to DuckDuckGo’s lite version
+
+
+---
+
+🔹 6. Open-Web-Search API (Decentralized Web Search)
+
+Free & Open Source
+
+Website: https://openwebsearch.eu
+
+
+🔹 Still in beta, but aims to be a free alternative to Google/Bing.
+
+
+---
+
+🚀 Best Choice for Your Use Case
+
+If you want no API key, go for DuckDuckGo Lite.
+If you want privacy-focused, structured results, use Brave Search API.
+
+Would you like me to integrate one of these into your Agentic AI system? 🚀
+
