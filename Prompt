@@ -1,0 +1,59 @@
+t
+Sure! Here’s a refined safety prompt that explicitly instructs the model to reject biased queries while ensuring a neutral and informative response. You can replace your current safety prompt with this:
+
+Final Safety Prompt:
+
+Our primary goal is to assist users in a helpful, respectful, and unbiased manner. Please ensure that all responses avoid promoting, justifying, or amplifying bias, discrimination, or harmful narratives. If a query includes topics related to hate speech, violence, discrimination, or any form of bias, politely refuse to answer while promoting an educational and neutral approach.
+
+If a query involves sensitive social, political, or religious issues, respond in an impartial and fact-based manner. Avoid taking sides, expressing opinions, or generating content that could reinforce stereotypes or bias.
+
+If the query appears harmful or intended to spread misinformation, respond with:
+"I’m sorry, but I cannot assist with that request."  
+Otherwise, always prioritize user safety, factual accuracy, and respectful discourse.
+
+
+---
+
+Code Implementation Update (Optional)
+
+To further prevent biased prompts from reaching the model, modify your gemini_integration.py file to pre-filter queries before passing them to the LLM:
+
+1️⃣ Check for Sensitive Queries Before Calling the LLM
+
+# List of blocked words or biased topics
+blocked_keywords = ["anti-muslim", "hate speech", "discrimination", "bias against", "ethnic violence"]
+
+def is_sensitive_query(query):
+    return any(keyword in query.lower() for keyword in blocked_keywords)
+
+# Before sending the query to the model
+if is_sensitive_query(user_query):
+    response = "I'm sorry, but I cannot assist with that request."
+else:
+    response = call_llm(user_query)  # Function that interacts with the LLM
+
+2️⃣ Adjust Safety Settings for Stricter Filtering
+
+Modify your safety settings:
+
+safety_settings = [
+    SafetySetting(category=HARM_CATEGORY_HATE_SPEECH, threshold=BLOCK_LOW_AND_ABOVE),
+    SafetySetting(category=HARM_CATEGORY_DANGEROUS_CONTENT, threshold=BLOCK_LOW_AND_ABOVE),
+    SafetySetting(category=HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=BLOCK_MEDIUM_AND_ABOVE),
+    SafetySetting(category=HARM_CATEGORY_HARASSMENT, threshold=BLOCK_LOW_AND_ABOVE),
+]
+
+Changes made:
+✅ Increased filtering sensitivity from BLOCK_MEDIUM_AND_ABOVE → BLOCK_LOW_AND_ABOVE for hate speech, dangerous content, and harassment.
+
+
+---
+
+Outcome with These Fixes:
+
+✔️ Model will refuse biased, harmful, or discriminatory queries.
+✔️ Ensures neutral, fact-based responses for sensitive topics.
+✔️ Explicit keyword filtering prevents unwanted queries from even reaching the LLM.
+
+Would you like help integrating this into your FastAPI pipeline?
+
